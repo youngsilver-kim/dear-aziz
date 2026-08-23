@@ -176,17 +176,39 @@
       transform: scale(0.95);
     }
 
-    /* 지도 영역 스타일 */
+    /* 지도 및 장소 영역 스타일 */
     #mapSection {
       display: none;
     }
     #map {
-      height: 280px;
+      height: 290px;
       width: 100%;
       border-radius: 16px;
       border: 2px solid #f6bd60;
       margin-top: 10px;
       z-index: 10;
+    }
+    .memory-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      justify-content: center;
+    }
+    .memory-tag {
+      background: #fff;
+      border: 1.5px solid #f28482;
+      color: #f28482;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .memory-tag:hover {
+      background: #f28482;
+      color: #fff;
     }
     .distance-box {
       background: #fbe4d8;
@@ -249,6 +271,14 @@
       50% { opacity: 1; transform: translate(-50%, -80px) scale(1.3); }
       100% { opacity: 0; transform: translate(-50%, -120px) scale(1); }
     }
+
+    .emoji-marker {
+      background: transparent;
+      border: none;
+      text-align: center;
+      font-size: 22px;
+      line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -281,22 +311,27 @@
     </div>
   </div>
 
-  <!-- 3. 지도 및 거리 카드 -->
+  <!-- 3. 지도 및 함께한 추억 카드 -->
   <div class="card" id="mapSection">
-    <h1>Our World & Memories 🌍</h1>
-    <div style="font-size: 0.85rem; color: #666; text-align: center; margin-bottom: 8px;">
-      📍 Click anywhere on the map to add your wishlist date spots
+    <h1>Our Memories & World 🌍</h1>
+    
+    <div style="font-size: 0.85rem; color: #555; text-align: center; font-weight: 600;">
+      ✨ Places We Been Together (Click tag to fly!):
     </div>
+    <!-- 함께한 장소 태그 버튼들 -->
+    <div class="memory-tags" id="memoryTags"></div>
+
     <div id="map"></div>
     
     <div class="distance-box" id="distanceBox">
       Calculating distance between us... ✈️
     </div>
 
+    <!-- 가고 싶은 여행지 리스트 -->
     <div class="wishlist-container">
-      <div class="wishlist-title">🗺️ Next Places I Want To Go With You:</div>
+      <div class="wishlist-title">📍 Wishlist Date Spots (Click map to add!):</div>
       <ul class="wishlist-ul" id="wishlistUl">
-        <li>Click on the map above to pick a place! ✨</li>
+        <li>Tap anywhere on the map above to pick our next place! ✈️</li>
       </ul>
     </div>
   </div>
@@ -466,43 +501,52 @@
       alert("💋 Secret Kiss Delivered to Aziz! 💋");
     }
 
-    /* 지도 및 직선거리 로직 */
+    /* 지도 및 장소 핀 로직 */
     let mapInitialized = false;
-    let wishlistItems = [];
 
     function initMap() {
       if(mapInitialized) return;
       mapInitialized = true;
 
-      // 좌표 정보
       const uijeongbu = [37.7381, 127.0450]; // 여자친구 (의정부)
       const auderghem = [50.8163, 4.4282];   // 아지즈 (벨기에 Auderghem)
 
-      // 지도 초기화 (전 세계 보이기)
-      const map = L.map('map').setView([30, 60], 2);
+      const map = L.map('map').setView([30, 50], 2);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
-      // 1. 현재 위치 마커 및 선 연결
-      const gfMarker = L.marker(uijeongbu).addTo(map).bindPopup("<b>Kim Youngeunaa 🏠</b><br>Uijeongbu Shindo Branew");
-      const azizMarker = L.marker(auderghem).addTo(map).bindPopup("<b>My Aziz ❤️</b><br>Chaussée de Wavre, Auderghem");
+      // 이모지 마커 생성 함수
+      const createEmojiIcon = (emoji) => L.divIcon({
+        className: 'emoji-marker',
+        html: emoji,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
 
-      const polyline = L.polyline([uijeongbu, auderghem], {
+      // 1. 현재 우리 위치 핀
+      L.marker(uijeongbu, { icon: createEmojiIcon('🏠') }).addTo(map)
+        .bindPopup("<b>Kim Youngeunaa 🏠</b><br>Uijeongbu Shindo Branew");
+
+      L.marker(auderghem, { icon: createEmojiIcon('💖') }).addTo(map)
+        .bindPopup("<b>My Aziz ❤️</b><br>Chaussée de Wavre, Auderghem");
+
+      // 직선 연결 선
+      L.polyline([uijeongbu, auderghem], {
         color: '#f28482',
         weight: 3,
         dashArray: '6, 8'
       }).addTo(map);
 
-      // 직선 거리 계산 (Haversine Formula)
+      // 직선 거리 계산
       const distKm = Math.round(getDistance(uijeongbu[0], uijeongbu[1], auderghem[0], auderghem[1]));
       document.getElementById("distanceBox").innerHTML = `
         📍 <b>${distKm.toLocaleString()} km</b> away from each other<br>
         <span style="font-size:0.8rem; color:#666;">No matter the distance, you are always in my heart ❤️</span>
       `;
 
-      // 2. 추억 장소들 마커 추가
+      // 2. 함께했던 장소들 핀 & 태그 버튼
       const memories = [
         { name: "Seoul 🇰🇷", coords: [37.5665, 126.9780] },
         { name: "Jeonju 🇰🇷", coords: [35.8242, 127.1480] },
@@ -511,28 +555,37 @@
         { name: "Brussels 🇧🇪", coords: [50.8503, 4.3517] },
         { name: "Ghent 🇧🇪", coords: [51.0543, 3.7174] },
         { name: "Malta 🇲🇹", coords: [35.9375, 14.3754] },
-        { name: "Gozo (Malta) 🇲🇹", coords: [36.0443, 14.2512] }
+        { name: "Gozo 🇲🇹", coords: [36.0443, 14.2512] }
       ];
 
+      const memoryTagsContainer = document.getElementById("memoryTags");
+      memoryTagsContainer.innerHTML = "";
+
       memories.forEach(place => {
-        L.circleMarker(place.coords, {
-          radius: 7,
-          fillColor: "#84a59d",
-          color: "#fff",
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.9
-        }).addTo(map).bindPopup(`<b>Memory with Aziz ✨</b><br>${place.name}`);
+        // 하트 이모지 핀 추가
+        const marker = L.marker(place.coords, { icon: createEmojiIcon('❤️') }).addTo(map);
+        marker.bindPopup(`<b>Memory with Aziz ✨</b><br>${place.name}`);
+
+        // 태그 버튼 생성
+        const tag = document.createElement("span");
+        tag.className = "memory-tag";
+        tag.innerText = place.name;
+        tag.onclick = () => {
+          playSound(700);
+          map.flyTo(place.coords, 8, { duration: 1.5 });
+          marker.openPopup();
+        };
+        memoryTagsContainer.appendChild(tag);
       });
 
-      // 3. 지도 클릭 시 wishlist 리스트 추가 로직
+      // 3. 지도 클릭 시 가고 싶은 곳 추가
       let wishFirstClick = true;
       map.on('click', function(e) {
         playSound(650);
         const lat = e.latlng.lat.toFixed(2);
         const lng = e.latlng.lng.toFixed(2);
 
-        L.marker([e.latlng.lat, e.latlng.lng]).addTo(map)
+        L.marker([e.latlng.lat, e.latlng.lng], { icon: createEmojiIcon('🌟') }).addTo(map)
           .bindPopup(`<b>Wishlist Spot ✈️</b><br>Lat: ${lat}, Lng: ${lng}`).openPopup();
 
         const ul = document.getElementById("wishlistUl");
