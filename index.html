@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>For Aziz ❤️</title>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Leaflet 지도 라이브러리 CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
   <style>
     * { box-sizing: border-box; }
     body {
       background-color: #f7ede2;
       font-family: 'Poppins', sans-serif;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
       min-height: 100vh;
       margin: 0;
@@ -20,7 +24,6 @@
       position: relative;
     }
     
-    /* 은은하게 떠오르는 배경 하트 애니메이션 */
     .bg-heart {
       position: fixed;
       bottom: -20px;
@@ -39,7 +42,7 @@
       background: #fffef0;
       width: 100%;
       max-width: 480px;
-      padding: 40px 30px;
+      padding: 35px 25px;
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       border: 2px dashed #f6bd60;
@@ -47,6 +50,7 @@
       line-height: 32px;
       position: relative;
       z-index: 10;
+      margin-bottom: 20px;
     }
     h1 {
       font-family: 'Caveat', cursive;
@@ -111,7 +115,7 @@
       font-size: 1.05rem;
       color: #444;
       white-space: pre-line;
-      min-height: 140px;
+      min-height: 130px;
     }
     .question-section {
       margin-top: 25px;
@@ -151,7 +155,6 @@
       white-space: nowrap;
     }
 
-    /* 허그 카운터 영역 */
     .hug-section {
       margin-top: 25px;
       padding-top: 15px;
@@ -171,6 +174,49 @@
     }
     .hug-btn:active {
       transform: scale(0.95);
+    }
+
+    /* 지도 영역 스타일 */
+    #mapSection {
+      display: none;
+    }
+    #map {
+      height: 280px;
+      width: 100%;
+      border-radius: 16px;
+      border: 2px solid #f6bd60;
+      margin-top: 10px;
+      z-index: 10;
+    }
+    .distance-box {
+      background: #fbe4d8;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.9rem;
+      color: #f28482;
+      font-weight: 600;
+      line-height: 20px;
+    }
+    .wishlist-container {
+      margin-top: 15px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 15px;
+      border: 1px dashed #f6bd60;
+    }
+    .wishlist-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+    }
+    .wishlist-ul {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 0.85rem;
+      color: #666;
     }
 
     .modal {
@@ -217,7 +263,7 @@
     <div class="quiz-options" id="quizOptions"></div>
   </div>
 
-  <!-- 2. 편지 카드 (퀴즈 통과 시 출현) -->
+  <!-- 2. 편지 카드 -->
   <div class="card" id="letterCard" style="display: none;">
     <h1 onclick="secretMessage()">Dear Aziz 💌</h1>
     <div id="typewriter"></div>
@@ -229,14 +275,33 @@
         <button id="noBtn" class="action-btn">NO 😜</button>
       </div>
 
-      <!-- 허그 카운터 추가 -->
       <div class="hug-section">
         <button class="hug-btn" onclick="sendHug()">Send Hugs 🫂 (<span id="hugCount">0</span>)</button>
       </div>
     </div>
   </div>
 
-  <!-- 3. 모달 팝업 -->
+  <!-- 3. 지도 및 거리 카드 -->
+  <div class="card" id="mapSection">
+    <h1>Our World & Memories 🌍</h1>
+    <div style="font-size: 0.85rem; color: #666; text-align: center; margin-bottom: 8px;">
+      📍 Click anywhere on the map to add your wishlist date spots
+    </div>
+    <div id="map"></div>
+    
+    <div class="distance-box" id="distanceBox">
+      Calculating distance between us... ✈️
+    </div>
+
+    <div class="wishlist-container">
+      <div class="wishlist-title">🗺️ Next Places I Want To Go With You:</div>
+      <ul class="wishlist-ul" id="wishlistUl">
+        <li>Click on the map above to pick a place! ✨</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 모달 팝업 -->
   <div class="modal" id="successModal">
     <div class="modal-content">
       <h2 style="color: #f28482; margin-top:0;">WANNA GO DATE WITH ME??? YAYY!! 🥰</h2>
@@ -246,7 +311,6 @@
   </div>
 
   <script>
-    // 브라우저 내장 심플 효과음
     function playSound(freq = 520, type = 'sine') {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -263,7 +327,6 @@
       } catch(e) {}
     }
 
-    // 퀴즈 데이터 설정
     const questions = [
       {
         question: "1. What is my pick up line?",
@@ -338,10 +401,11 @@
     function unlockLetter() {
       document.getElementById("quizCard").style.display = "none";
       document.getElementById("letterCard").style.display = "block";
+      document.getElementById("mapSection").style.display = "block";
       typeWriter();
+      initMap();
     }
 
-    // 편지 내용
     const text = `Hi my babyyyyyyyy\n\nYou came back to this site!!! awww\n\nI can't focus on writing my thesis :((( and little bit bored\n\nI will always love u and be your sideeee ✨\n\nنحبك ❤️`;
     let index = 0;
 
@@ -356,8 +420,7 @@
       }
     }
 
-    // NO 버튼 도망치며 문구 계속 바꾸기
-    const noTexts = ["tf????", "why?????????", "neverrr 🏃‍♂️", "wrong button", "huh???????", "nope"];
+    const noTexts = ["NO 😜", "nice tryyyy 🤪", "neverrr 🏃‍♂️", "wrong button babyyyy 😋", "u can't click this lineee 😂", "nopeee 🙈"];
     let noTextIndex = 0;
 
     function initNoBtn() {
@@ -380,7 +443,6 @@
       noBtn.addEventListener("touchstart", moveBtn);
     }
 
-    // 허그 보내기 기능
     let hugCount = 0;
     function sendHug() {
       hugCount++;
@@ -404,7 +466,100 @@
       alert("💋 Secret Kiss Delivered to Aziz! 💋");
     }
 
-    // 화면 클릭 하트 이펙트
+    /* 지도 및 직선거리 로직 */
+    let mapInitialized = false;
+    let wishlistItems = [];
+
+    function initMap() {
+      if(mapInitialized) return;
+      mapInitialized = true;
+
+      // 좌표 정보
+      const uijeongbu = [37.7381, 127.0450]; // 여자친구 (의정부)
+      const auderghem = [50.8163, 4.4282];   // 아지즈 (벨기에 Auderghem)
+
+      // 지도 초기화 (전 세계 보이기)
+      const map = L.map('map').setView([30, 60], 2);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      // 1. 현재 위치 마커 및 선 연결
+      const gfMarker = L.marker(uijeongbu).addTo(map).bindPopup("<b>Kim Youngeunaa 🏠</b><br>Uijeongbu Shindo Branew");
+      const azizMarker = L.marker(auderghem).addTo(map).bindPopup("<b>My Aziz ❤️</b><br>Chaussée de Wavre, Auderghem");
+
+      const polyline = L.polyline([uijeongbu, auderghem], {
+        color: '#f28482',
+        weight: 3,
+        dashArray: '6, 8'
+      }).addTo(map);
+
+      // 직선 거리 계산 (Haversine Formula)
+      const distKm = Math.round(getDistance(uijeongbu[0], uijeongbu[1], auderghem[0], auderghem[1]));
+      document.getElementById("distanceBox").innerHTML = `
+        📍 <b>${distKm.toLocaleString()} km</b> away from each other<br>
+        <span style="font-size:0.8rem; color:#666;">No matter the distance, you are always in my heart ❤️</span>
+      `;
+
+      // 2. 추억 장소들 마커 추가
+      const memories = [
+        { name: "Seoul 🇰🇷", coords: [37.5665, 126.9780] },
+        { name: "Jeonju 🇰🇷", coords: [35.8242, 127.1480] },
+        { name: "Busan 🇰🇷", coords: [35.1796, 129.0756] },
+        { name: "Okinawa 🇯🇵", coords: [26.3344, 127.8056] },
+        { name: "Brussels 🇧🇪", coords: [50.8503, 4.3517] },
+        { name: "Ghent 🇧🇪", coords: [51.0543, 3.7174] },
+        { name: "Malta 🇲🇹", coords: [35.9375, 14.3754] },
+        { name: "Gozo (Malta) 🇲🇹", coords: [36.0443, 14.2512] }
+      ];
+
+      memories.forEach(place => {
+        L.circleMarker(place.coords, {
+          radius: 7,
+          fillColor: "#84a59d",
+          color: "#fff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.9
+        }).addTo(map).bindPopup(`<b>Memory with Aziz ✨</b><br>${place.name}`);
+      });
+
+      // 3. 지도 클릭 시 wishlist 리스트 추가 로직
+      let wishFirstClick = true;
+      map.on('click', function(e) {
+        playSound(650);
+        const lat = e.latlng.lat.toFixed(2);
+        const lng = e.latlng.lng.toFixed(2);
+
+        L.marker([e.latlng.lat, e.latlng.lng]).addTo(map)
+          .bindPopup(`<b>Wishlist Spot ✈️</b><br>Lat: ${lat}, Lng: ${lng}`).openPopup();
+
+        const ul = document.getElementById("wishlistUl");
+        if(wishFirstClick) {
+          ul.innerHTML = "";
+          wishFirstClick = false;
+        }
+
+        const li = document.createElement("li");
+        li.innerText = `New Dream Spot: [${lat}, ${lng}] 💕`;
+        ul.appendChild(li);
+      });
+
+      setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
     document.addEventListener("click", function(e) {
       const heart = document.createElement("div");
       heart.className = "click-heart";
@@ -417,7 +572,6 @@
       setTimeout(() => heart.remove(), 1000);
     });
 
-    // 하트 폭죽
     function triggerHeartConfetti(amount = 30) {
       for(let i = 0; i < amount; i++) {
         setTimeout(() => {
@@ -432,7 +586,6 @@
       }
     }
 
-    // 배경에 두둥실 떠다니는 하트 생성기
     function createBgHearts() {
       for(let i = 0; i < 12; i++) {
         const bgHeart = document.createElement("div");
