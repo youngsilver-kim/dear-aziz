@@ -16,7 +16,25 @@
       min-height: 100vh;
       margin: 0;
       padding: 20px;
+      overflow-x: hidden;
+      position: relative;
     }
+    
+    /* 은은하게 떠오르는 배경 하트 애니메이션 */
+    .bg-heart {
+      position: fixed;
+      bottom: -20px;
+      font-size: 18px;
+      opacity: 0.4;
+      pointer-events: none;
+      animation: floatUp 8s linear infinite;
+      z-index: 0;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
+      100% { transform: translateY(-105vh) rotate(360deg); opacity: 0; }
+    }
+
     .card {
       background: #fffef0;
       width: 100%;
@@ -27,6 +45,8 @@
       border: 2px dashed #f6bd60;
       background-image: repeating-linear-gradient(#fffef0, #fffef0 31px, #e8e8e8 32px);
       line-height: 32px;
+      position: relative;
+      z-index: 10;
     }
     h1 {
       font-family: 'Caveat', cursive;
@@ -34,9 +54,29 @@
       color: #f28482;
       margin: 0 0 15px 0;
       text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s;
+    }
+    h1:hover {
+      transform: scale(1.05);
     }
     
-    /* 퀴즈 스타일 */
+    .progress-bar-container {
+      width: 100%;
+      background-color: #fbe4d8;
+      border-radius: 10px;
+      height: 8px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: #f28482;
+      transition: width 0.3s ease;
+    }
+
     .quiz-title {
       font-size: 1.1rem;
       font-weight: 600;
@@ -67,7 +107,6 @@
       color: white;
     }
 
-    /* 편지 영역 스타일 */
     #typewriter {
       font-size: 1.05rem;
       color: #444;
@@ -75,7 +114,7 @@
       min-height: 140px;
     }
     .question-section {
-      margin-top: 30px;
+      margin-top: 25px;
       text-align: center;
       display: none;
     }
@@ -103,12 +142,37 @@
     #yesBtn {
       background-color: #84a59d;
       color: white;
+      transition: transform 0.1s;
     }
     #noBtn {
       background-color: #f28482;
       color: white;
       position: absolute;
+      white-space: nowrap;
     }
+
+    /* 허그 카운터 영역 */
+    .hug-section {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px dashed #f6bd60;
+      text-align: center;
+    }
+    .hug-btn {
+      background-color: #f6bd60;
+      color: white;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.1s;
+    }
+    .hug-btn:active {
+      transform: scale(0.95);
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -116,6 +180,7 @@
       background: rgba(0,0,0,0.4);
       justify-content: center;
       align-items: center;
+      z-index: 1000;
     }
     .modal-content {
       background: white;
@@ -125,6 +190,19 @@
       max-width: 300px;
       box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     }
+
+    .click-heart {
+      position: fixed;
+      font-size: 22px;
+      pointer-events: none;
+      animation: floatAndFade 1s linear forwards;
+      z-index: 9999;
+    }
+    @keyframes floatAndFade {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
+      50% { opacity: 1; transform: translate(-50%, -80px) scale(1.3); }
+      100% { opacity: 0; transform: translate(-50%, -120px) scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -132,13 +210,16 @@
   <!-- 1. Security Check 퀴즈 카드 -->
   <div class="card" id="quizCard">
     <h1>Security Check 🔒</h1>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
     <div class="quiz-title" id="quizQuestion">Loading question...</div>
     <div class="quiz-options" id="quizOptions"></div>
   </div>
 
   <!-- 2. 편지 카드 (퀴즈 통과 시 출현) -->
   <div class="card" id="letterCard" style="display: none;">
-    <h1>Dear Aziz 💌</h1>
+    <h1 onclick="secretMessage()">Dear Aziz 💌</h1>
     <div id="typewriter"></div>
 
     <div class="question-section" id="questionSection">
@@ -146,6 +227,11 @@
       <div class="btn-group">
         <button id="yesBtn" class="action-btn" onclick="showModal()">YES! 💕</button>
         <button id="noBtn" class="action-btn">NO 😜</button>
+      </div>
+
+      <!-- 허그 카운터 추가 -->
+      <div class="hug-section">
+        <button class="hug-btn" onclick="sendHug()">Send Hugs 🫂 (<span id="hugCount">0</span>)</button>
       </div>
     </div>
   </div>
@@ -160,6 +246,23 @@
   </div>
 
   <script>
+    // 브라우저 내장 심플 효과음
+    function playSound(freq = 520, type = 'sine') {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch(e) {}
+    }
+
     // 퀴즈 데이터 설정
     const questions = [
       {
@@ -194,6 +297,10 @@
     function loadQuestion() {
       const q = questions[currentQ];
       document.getElementById("quizQuestion").innerText = q.question;
+      
+      const progressPercent = ((currentQ) / questions.length) * 100;
+      document.getElementById("progressBar").style.width = `${progressPercent}%`;
+
       const optionsContainer = document.getElementById("quizOptions");
       optionsContainer.innerHTML = "";
 
@@ -208,14 +315,20 @@
 
     function checkAnswer(selectedIndex) {
       if (selectedIndex === questions[currentQ].answer) {
+        playSound(600);
         currentQ++;
         if (currentQ < questions.length) {
           loadQuestion();
         } else {
-          alert("Yay! You are Aziz!");
-          unlockLetter();
+          document.getElementById("progressBar").style.width = `100%`;
+          setTimeout(() => {
+            playSound(800);
+            alert("Yayyyyyy! You are Aziz!");
+            unlockLetter();
+          }, 200);
         }
       } else {
+        playSound(200, 'sawtooth');
         alert("Who are you??????????? 🤨");
         currentQ = 0;
         loadQuestion();
@@ -228,7 +341,7 @@
       typeWriter();
     }
 
-    // 편지 내용 (마지막에 Nhabbik ❤️ 추가)
+    // 편지 내용
     const text = `Hi my babyyyyyyyy\n\nYou came back to this site!!! awww\n\nI can't focus on writing my thesis :((( and little bit bored\n\nI will always love u and be your sideeee ✨\n\nنحبك ❤️`;
     let index = 0;
 
@@ -243,24 +356,42 @@
       }
     }
 
-    // NO 버튼 도망 로직
+    // NO 버튼 도망치며 문구 계속 바꾸기
+    const noTexts = ["tf????", "why?????????", "neverrr 🏃‍♂️", "wrong button", "huh???????", "nope"];
+    let noTextIndex = 0;
+
     function initNoBtn() {
       const noBtn = document.getElementById("noBtn");
       noBtn.style.left = "55%";
 
       const moveBtn = () => {
-        const x = Math.random() * (window.innerWidth - 100);
+        playSound(300);
+        const x = Math.random() * (window.innerWidth - 140);
         const y = Math.random() * (window.innerHeight - 50);
         noBtn.style.position = "fixed";
         noBtn.style.left = `${x}px`;
         noBtn.style.top = `${y}px`;
+
+        noTextIndex = (noTextIndex + 1) % noTexts.length;
+        noBtn.innerText = noTexts[noTextIndex];
       };
 
       noBtn.addEventListener("mouseover", moveBtn);
       noBtn.addEventListener("touchstart", moveBtn);
     }
 
+    // 허그 보내기 기능
+    let hugCount = 0;
+    function sendHug() {
+      hugCount++;
+      playSound(700);
+      document.getElementById("hugCount").innerText = hugCount;
+      triggerHeartConfetti(5);
+    }
+
     function showModal() {
+      playSound(900);
+      triggerHeartConfetti(35);
       document.getElementById("successModal").style.display = "flex";
     }
 
@@ -268,7 +399,56 @@
       document.getElementById("successModal").style.display = "none";
     }
 
-    window.onload = loadQuestion;
+    function secretMessage() {
+      playSound(750);
+      alert("💋 Secret Kiss Delivered to Aziz! 💋");
+    }
+
+    // 화면 클릭 하트 이펙트
+    document.addEventListener("click", function(e) {
+      const heart = document.createElement("div");
+      heart.className = "click-heart";
+      const icons = ["❤️", "💖", "✨", "💕", "🌸"];
+      heart.innerText = icons[Math.floor(Math.random() * icons.length)];
+      heart.style.left = `${e.clientX}px`;
+      heart.style.top = `${e.clientY}px`;
+      document.body.appendChild(heart);
+
+      setTimeout(() => heart.remove(), 1000);
+    });
+
+    // 하트 폭죽
+    function triggerHeartConfetti(amount = 30) {
+      for(let i = 0; i < amount; i++) {
+        setTimeout(() => {
+          const heart = document.createElement("div");
+          heart.className = "click-heart";
+          heart.innerText = "❤️";
+          heart.style.left = `${Math.random() * window.innerWidth}px`;
+          heart.style.top = `${window.innerHeight - 50}px`;
+          document.body.appendChild(heart);
+          setTimeout(() => heart.remove(), 1000);
+        }, i * 40);
+      }
+    }
+
+    // 배경에 두둥실 떠다니는 하트 생성기
+    function createBgHearts() {
+      for(let i = 0; i < 12; i++) {
+        const bgHeart = document.createElement("div");
+        bgHeart.className = "bg-heart";
+        bgHeart.innerText = ["💖", "💕", "🌸", "✨"][Math.floor(Math.random() * 4)];
+        bgHeart.style.left = `${Math.random() * 100}vw`;
+        bgHeart.style.animationDelay = `${Math.random() * 8}s`;
+        bgHeart.style.animationDuration = `${6 + Math.random() * 4}s`;
+        document.body.appendChild(bgHeart);
+      }
+    }
+
+    window.onload = () => {
+      loadQuestion();
+      createBgHearts();
+    };
   </script>
 </body>
 </html>
