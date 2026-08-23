@@ -32,9 +32,42 @@
       font-family: 'Caveat', cursive;
       font-size: 2.8rem;
       color: #f28482;
-      margin: 0 0 20px 0;
+      margin: 0 0 15px 0;
       text-align: center;
     }
+    
+    /* 퀴즈 스타일 */
+    .quiz-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #444;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .quiz-btn {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #555;
+      background-color: #fff;
+      border: 2px solid #f6bd60;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .quiz-btn:hover {
+      background-color: #f6bd60;
+      color: white;
+    }
+
+    /* 편지 영역 스타일 */
     #typewriter {
       font-size: 1.05rem;
       color: #444;
@@ -59,7 +92,7 @@
       position: relative;
       min-height: 50px;
     }
-    button {
+    button.action-btn {
       padding: 10px 24px;
       font-size: 1rem;
       font-weight: 600;
@@ -96,30 +129,97 @@
 </head>
 <body>
 
-  <div class="card">
+  <!-- 1. Security Check 퀴즈 카드 -->
+  <div class="card" id="quizCard">
+    <h1>Security Check 🔒</h1>
+    <div class="quiz-title" id="quizQuestion">Loading question...</div>
+    <div class="quiz-options" id="quizOptions"></div>
+  </div>
+
+  <!-- 2. 편지 카드 (퀴즈 통과 시 출현) -->
+  <div class="card" id="letterCard" style="display: none;">
     <h1>Dear Aziz 💌</h1>
     <div id="typewriter"></div>
 
     <div class="question-section" id="questionSection">
       <div class="question-title">Do you want to go on a date with me? 🌹</div>
       <div class="btn-group">
-        <button id="yesBtn" onclick="showModal()">YES! 💕</button>
-        <button id="noBtn">NO 😜</button>
+        <button id="yesBtn" class="action-btn" onclick="showModal()">YES! 💕</button>
+        <button id="noBtn" class="action-btn">NO 😜</button>
       </div>
     </div>
   </div>
 
+  <!-- 3. 모달 팝업 -->
   <div class="modal" id="successModal">
     <div class="modal-content">
       <h2 style="color: #f28482; margin-top:0;">Yay! 🥰</h2>
       <p style="color: #555;">I knew you would say YES<br>I love youuuuuuuuu❤️</p>
-      <button onclick="closeModal()" style="background:#84a59d; color:white;">Close</button>
+      <button class="action-btn" onclick="closeModal()" style="background:#84a59d; color:white;">Close</button>
     </div>
   </div>
 
   <script>
-    // 타자기 효과 텍스트 설정
-    const text = `Hi my babyyyyyyyy!\n\nWhile everyone uses GitHub for writing code, I built this space just for you my baby.\n\nYou are my favorite commit(<- do you know what commit is?).\n\nI will always love u and be your sideeee ✨`;
+    // 퀴즈 데이터 설정
+    const questions = [
+      {
+        question: "1. What is my pick up line?",
+        options: ["hi you look cute", "do you wanna go date with me?", "rate me"],
+        answer: 2
+      },
+      {
+        question: "2. What is my favorite place to buy a smoothie?",
+        options: ["delhaize", "carrefour", "aldi"],
+        answer: 0
+      },
+      {
+        question: "3. How do you call me?",
+        options: ["my love", "darling", "kim youngeunaa"],
+        answer: 2
+      }
+    ];
+
+    let currentQ = 0;
+
+    function loadQuestion() {
+      const q = questions[currentQ];
+      document.getElementById("quizQuestion").innerText = q.question;
+      const optionsContainer = document.getElementById("quizOptions");
+      optionsContainer.innerHTML = "";
+
+      q.options.forEach((opt, index) => {
+        const btn = document.createElement("button");
+        btn.className = "quiz-btn";
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(index);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(selectedIndex) {
+      if (selectedIndex === questions[currentQ].answer) {
+        currentQ++;
+        if (currentQ < questions.length) {
+          loadQuestion();
+        } else {
+          alert("Yay! You are Aziz! Access granted ❤️");
+          unlockLetter();
+        }
+      } else {
+        alert("Who are you?! 🤨 You are NOT Aziz! Back to the start!");
+        currentQ = 0;
+        loadQuestion();
+      }
+    }
+
+    function unlockLetter() {
+      document.getElementById("quizCard").style.display = "none";
+      document.getElementById("letterCard").style.display = "block";
+      typeWriter();
+    }
+
+    // 편지 내용 (마지막에 Nhabbik ❤️ 추가)
+    const text = `Hi my babyyyyyyyy!\n\nWhile everyone uses GitHub for writing code, I built this space just for you my baby.\n\nYou are my favorite commit(<- do you know what commit is?).\n\nI will always love u and be your sideeee ✨\n\nNhabbik ❤️`;
     let index = 0;
 
     function typeWriter() {
@@ -133,7 +233,7 @@
       }
     }
 
-    // NO 버튼 도망치는 로직
+    // NO 버튼 도망 로직
     function initNoBtn() {
       const noBtn = document.getElementById("noBtn");
       noBtn.style.left = "55%";
@@ -158,7 +258,7 @@
       document.getElementById("successModal").style.display = "none";
     }
 
-    window.onload = typeWriter;
+    window.onload = loadQuestion;
   </script>
 </body>
 </html>
