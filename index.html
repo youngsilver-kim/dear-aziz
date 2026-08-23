@@ -153,8 +153,8 @@
   <!-- 3. 모달 팝업 -->
   <div class="modal" id="successModal">
     <div class="modal-content">
-      <h2 style="color: #f28482; margin-top:0;">Yay! 🥰</h2>
-      <p style="color: #555;">I knew you would say YES<br>I love youuuuuuuuu❤️</p>
+      <h2 style="color: #f28482; margin-top:0;">WANNA GO DATE WITH ME??? YAYY!! 🥰</h2>
+      <p style="color: #555;">I knew you would say yes<br>I love youuuuuuuuu❤️</p>
       <button class="action-btn" onclick="closeModal()" style="background:#84a59d; color:white;">Close</button>
     </div>
   </div>
@@ -176,6 +176,16 @@
         question: "3. How do you call me?",
         options: ["my love", "darling", "kim youngeunaa"],
         answer: 2
+      },
+      {
+        question: "4. What is my favorite place in belgium?",
+        options: ["your place", "boulangerie", "carrefour"],
+        answer: 2
+      },
+      {
+        question: "5. Where did we meet?",
+        options: ["Chung-ang uni", "JuSt road", "jeonju"],
+        answer: 1
       }
     ];
 
@@ -202,11 +212,11 @@
         if (currentQ < questions.length) {
           loadQuestion();
         } else {
-          alert("Yay! You are Aziz! Access granted ❤️");
+          alert("Yay! You are Aziz!");
           unlockLetter();
         }
       } else {
-        alert("Who are you?! 🤨 You are NOT Aziz! Back to the start!");
+        alert("Who are you??????????? 🤨");
         currentQ = 0;
         loadQuestion();
       }
@@ -219,7 +229,7 @@
     }
 
     // 편지 내용 (마지막에 Nhabbik ❤️ 추가)
-    const text = `Hi my babyyyyyyyy!\n\nWhile everyone uses GitHub for writing code, I built this space just for you my baby.\n\nYou are my favorite commit(<- do you know what commit is?).\n\nI will always love u and be your sideeee ✨\n\nنحبك ❤️`;
+    const text = `Hi my babyyyyyyyy\n\nYou came back to this site!!! awww\n\nI can't focus on writing my thesis :((( and little bit bored\n\nI will always love u and be your sideeee ✨\n\nنحبك ❤️`;
     let index = 0;
 
     function typeWriter() {
